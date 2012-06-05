@@ -167,7 +167,7 @@ namespace wiselib
 
         void on_sens(typename Sensor::value_t v)
         {
-            debug_->debug("sensing %s %d",observed_property_.c_str(), v);
+            // debug_->debug("sensing %s %d",observed_property_.c_str(), v);
             if(!busy_){
                 last_measurement_ = v;
                 timer_->template set_timer<self_type,
@@ -177,7 +177,7 @@ namespace wiselib
 
         void update(void* )
         {
-            debug_->debug("updating TS");
+            // debug_->debug("updating TS");
             busy_ = true;
             string_t date = int_to_string(time_);
             string_t data = int_to_string(last_measurement_);
@@ -216,7 +216,7 @@ namespace wiselib
                 t[1] = (*iter)[1];
                 t[2] = (*iter)[2];
                 t[3] = (*iter)[3];
-                debug_->debug( "erasing s %s p %s o %s m %s \n",t[0].c_str( ), t[1].c_str( ), t[2].c_str( ), t[3].c_str( ) );
+                // debug_->debug( "erasing s %s p %s o %s m %s \n",t[0].c_str( ), t[1].c_str( ), t[2].c_str( ), t[3].c_str( ) );
                 // debug_->debug("pre erase");
                 tuple_store_->erase(iter);
                 /*
