@@ -166,7 +166,6 @@ namespace wiselib{
         coap_packet_t packet;
         resource_t resources[CONF_MAX_RESOURCES];
         uint8_t res;
-
 	};
 }
 

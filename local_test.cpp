@@ -243,6 +243,8 @@ public:
                  &IoTTest::debug_printer> (10000, this, 0);
         timer_->set_timer<IoTTest,
                &IoTTest::execute > (5000, this, 0);
+        timer_->set_timer<IoTTest,
+               &IoTTest::get_light > (4000, this, 0);
 
         debug_->debug("CoAP application bootin! %d\n", mid_);
 
@@ -336,8 +338,8 @@ public:
 
     void add_resources( )
     {
-    	uint8_t rid = protocol_.add_resource( "sensors/temp", true, 120, 5, TEXT_PLAIN );
-    	protocol_.add_method<IoTTest, &IoTTest::get_temp>( rid, 0, GET, this);
+    	uint8_t rid = protocol_.add_resource( "sensors/light", true, 120, 5, TEXT_PLAIN );
+    	protocol_.add_method<IoTTest, &IoTTest::get_light>( rid, 0, GET, this);
     }
 
 #ifdef PC
@@ -406,11 +408,19 @@ public:
                 &IoTTest::debug_printer> (10000, this, 0);
 	}
 
-    char* get_temp( uint8_t method )
+    char* get_light( uint8_t method )
     {
-       int8_t temp = 10;
-       debug_->debug( "temperature = %i °C", temp );
-       sprintf( data_, "%d", temp );
+       int8_t light_val = 10;
+
+       tuple_t t;
+       t[COL_SUBJECT] = "ex:Sensor1235";
+       t[COL_PREDICATE] = "<http://www.loa-cnr.it/ontologies/DUL.owl#hasValue>";
+       t.set_wildcard(COL_OBJECT, true);
+       t.set_wildcard(COL_BITMASK, true);
+
+       codec_store_t::iterator it = codec_store_->find( t );
+
+       debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
        return data_;
     }
 
