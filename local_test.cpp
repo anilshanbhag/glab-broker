@@ -244,7 +244,7 @@ public:
         timer_->set_timer<IoTTest,
                &IoTTest::execute > (5000, this, 0);
         timer_->set_timer<IoTTest,
-               &IoTTest::get_light > (4000, this, 0);
+               &IoTTest::get_light2 > (4000, this, 0);
 
         debug_->debug("CoAP application bootin! %d\n", mid_);
 
@@ -419,7 +419,21 @@ public:
        codec_store_t::iterator it = codec_store_->find( t );
 
        debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
-       return data_;
+       return (*it)[2].c_str();
+    }
+
+    void get_light2( void* )
+    {
+       tuple_t t;
+       t[0] = "ex:Sensor1235";
+       t[1] = "<http://www.loa-cnr.it/ontologies/DUL.owl#hasValue>";
+       t.set_wildcard(2, true);
+       t.set_wildcard(3, true);
+
+       codec_store_t::iterator it = codec_store_->find( t );
+
+       debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
+       // return (*it)[2].c_str();
     }
 
 
