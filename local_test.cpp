@@ -410,13 +410,11 @@ public:
 
     char* get_light( uint8_t method )
     {
-       int8_t light_val = 10;
-
        tuple_t t;
-       t[COL_SUBJECT] = "ex:Sensor1235";
-       t[COL_PREDICATE] = "<http://www.loa-cnr.it/ontologies/DUL.owl#hasValue>";
-       t.set_wildcard(COL_OBJECT, true);
-       t.set_wildcard(COL_BITMASK, true);
+       t[0] = "ex:Sensor1235";
+       t[1] = "<http://www.loa-cnr.it/ontologies/DUL.owl#hasValue>";
+       t.set_wildcard(2, true);
+       t.set_wildcard(3, true);
 
        codec_store_t::iterator it = codec_store_->find( t );
 
