@@ -194,7 +194,9 @@ namespace wiselib
             t[COL_PREDICATE] = uri_hasValue;
             t.set_wildcard(COL_OBJECT, true);
             t.set_wildcard(COL_BITMASK, true);
+
             typename tuple_store_t::iterator it_end = tuple_store_->end( );
+            /*
             for ( typename tuple_store_t::iterator it =  tuple_store_->begin( ); it != it_end; ++it )
             {
                 tuple_t t;
@@ -207,6 +209,7 @@ namespace wiselib
                 debug_->debug( "s %s p %s o %s m %s \n",t[0].c_str( ), t[1].c_str( ), t[2].c_str( ), t[3].c_str( ) );
 
             }
+            */
             typename tuple_store_t::iterator iter = tuple_store_->find(t);
             if(iter != tuple_store_->end()) {
                 old_bitmask_hasvalue = Broker::get_bitmask(*iter);

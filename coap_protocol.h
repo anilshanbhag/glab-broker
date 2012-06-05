@@ -76,6 +76,11 @@ namespace wiselib{
         	}
         }
 
+        void received(typename Radio::node_id_t source, typename Radio::size_t len, typename Radio::block_data_t *buf)
+        {
+        	debug_->debug("Got something1");
+        }
+
         void init(broker_t& broker, typename allocator_t::self_pointer_t allocator, typename Radio::self_pointer_t radio,
         		typename Timer_P::self_pointer_t timer, typename Debug_P::self_pointer_t debug, typename Rand_P::self_pointer_t rand)
         {
@@ -84,6 +89,8 @@ namespace wiselib{
         	broker_ = &broker;
             allocator_ = allocator;
         	radio_ = radio;
+        	radio_->enable_radio();
+        	radio_->template reg_recv_callback<self_type, &self_type::received > (this);
         	timer_ = timer;
             debug_ = debug;
             rand_ = rand;
@@ -124,7 +131,7 @@ namespace wiselib{
 		void coap_start( )
 		{
             coap_.init( *radio_, *timer_, *debug_, mid_, resources );
-            radio_->template reg_recv_callback<self_type, &self_type::receive_radio_message > (this);
+            // radio_->template reg_recv_callback<self_type, &self_type::receive_radio_message > (this);
 		}
 
 	private:
