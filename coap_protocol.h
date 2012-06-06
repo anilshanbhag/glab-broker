@@ -63,7 +63,6 @@ namespace wiselib{
 
         void receive_radio_message(typename Radio::node_id_t source, typename Radio::size_t len, typename Radio::block_data_t *buf)
         {
-        	debug_->debug("Got something");
         	if (buf[0] == WISELIB_MID_COAP)
         	{
 #ifdef ISENSE
@@ -90,7 +89,6 @@ namespace wiselib{
             allocator_ = allocator;
         	radio_ = radio;
         	radio_->enable_radio();
-        	radio_->template reg_recv_callback<self_type, &self_type::received > (this);
         	timer_ = timer;
             debug_ = debug;
             rand_ = rand;
@@ -131,7 +129,7 @@ namespace wiselib{
 		void coap_start( )
 		{
             coap_.init( *radio_, *timer_, *debug_, mid_, resources );
-            // radio_->template reg_recv_callback<self_type, &self_type::receive_radio_message > (this);
+            radio_->template reg_recv_callback<self_type, &self_type::receive_radio_message > (this);
 		}
 
 	private:

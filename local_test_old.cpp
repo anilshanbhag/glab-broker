@@ -364,6 +364,7 @@ lightsensor_->register_sensor_callback<IoTTest, &IoTTest::callbackcrap > (this);
 
     }
 
+#define PC
 #ifdef PC
 
     void post_metadata( )

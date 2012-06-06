@@ -181,7 +181,6 @@ typedef wiselib::PayloadRequestMessage<Os> payload_message_t;
     #endif
 #endif
 
-
 allocator_t::self_pointer_t allocator_ = &allocator_instance;
 
 class IoTTest
@@ -240,12 +239,13 @@ public:
     #endif
 
         timer_->set_timer<IoTTest,
-                 &IoTTest::debug_printer> (10000, this, 0);
-        timer_->set_timer<IoTTest,
-               &IoTTest::execute > (5000, this, 0);
+               &IoTTest::execute > (2000, this, 0);
+#ifndef PC
         timer_->set_timer<IoTTest,
                &IoTTest::get_light2 > (4000, this, 0);
-
+        timer_->set_timer<IoTTest,
+                 &IoTTest::debug_printer> (10000, this, 0);
+#endif
         debug_->debug("CoAP application bootin! %d\n", mid_);
 
 #endif
@@ -257,8 +257,10 @@ public:
     {
 #ifdef PC
         send_coap( );
-        broker_t::string_t doc_name( "NODE", allocator_ );
+        // broker_t::string_t doc_name( "NODE", allocator_ );
         // request_document( doc_name );
+        timer_->set_timer<IoTTest,
+               &IoTTest::execute > (1000, this, 0);
 #endif // PC
     }
 #endif // TS_CODESIZE
@@ -384,6 +386,7 @@ public:
 #ifdef DRY
         protocol_.receive_radio_message( 0x8, buf_len, buf);
 #else
+        debug_->debug("Sending messageSize: %d \n", buf_len);
         radio_->send( Os::Radio::BROADCAST_ADDRESS, buf_len, buf );
 #endif
         //timer_->set_timer<CoapApplication, &CoapApplication::simple_send>( 30000, this, 0 );
