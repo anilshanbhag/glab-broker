@@ -347,7 +347,7 @@ public:
 #ifdef PC
     void send_coap( )
     {
-        char path[] = "sensors/temp\0";
+        char path[] = "sensors/light\0";
         char payload[] = "0";
         Os::Radio::block_data_t buf[100];
         uint8_t buf_len;
