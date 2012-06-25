@@ -8,13 +8,9 @@
 
 /**
  * For "pc" module: make pc
- * For "isense" module: make isense.5148
+ * For "isense" : make isense.5148
  * To simulate on pc :
  * uncomment flag #define DRY & run make pc
- */
-
-/**
- *  TODO : Problem when both TS_SDP and LS_SDP enabled.
  */
 
 #define TS_MALLOC_FREE_ALLOCATOR 1
@@ -23,7 +19,7 @@
 #include "external_interface/external_interface_testing.h"
 
 #include "util/pstl/static_string.h"
-#include "util/broker/broker.h"
+#include "broker.h"
 #include "util/wisebed_node_api/command_types.h"
 #include "util/delegates/delegate.hpp"
 #include <util/tuple_store/simple_tuple.h>
@@ -48,13 +44,11 @@ typedef wiselib::OSMODEL Os;
 // To simulate tuplestore add and get on pc
 // #define DRY
 
-#ifndef PC
-    // To enable temperature sensor
-	// #define TS_SDP
+// To enable temperature sensor
+//#define TS_SDP
 
-    // To enable light sensor
-	#define LS_SDP
-#endif
+// To enable light sensor
+#define LS_SDP
 
 // #define USE_SHDT
 
@@ -65,11 +59,10 @@ typedef wiselib::OSMODEL Os;
     typedef wiselib::FakeRandModel<Os> rand_t;
 #endif
 
+
 typedef Os::Timer Timer;
 typedef Os::Debug debug_t;
 
-#include "algorithms/coap/coap.h"
-typedef wiselib::Coap<Os, Os::Radio, Os::Timer, Os::Debug, Os::Rand> coap_t;
 
 #if TS_MALLOC_FREE_ALLOCATOR
     #define FIRST_FIT_ALLOCATOR 0
@@ -92,6 +85,12 @@ typedef wiselib::Coap<Os, Os::Radio, Os::Timer, Os::Debug, Os::Rand> coap_t;
 
 
 #define COLS 4
+
+#ifdef PC
+    #include "n3reader.h"
+#endif
+
+
 
 #include <util/pstl/string_dynamic.h>
 typedef wiselib::string_dynamic<Os, allocator_t> string_t;
@@ -150,17 +149,17 @@ typedef wiselib::protobuf::buffer_dynamic<Os, allocator_t> buffer_dynamic_t;
     #include "shdt_rdf_serializer.h"
     typedef wiselib::ShdtRdfSerializer<Os, broker_t::iterator, buffer_dynamic_t, allocator_t, broker_t::string_t> serializer_t;
 #else
-    #include "util/broker/protobuf_rdf_serializer.h"
+    #include "protobuf_rdf_serializer.h"
     typedef wiselib::ProtobufRdfSerializer<Os, broker_t::iterator, buffer_dynamic_t, allocator_t> serializer_t;
 #endif
 
-#include "util/broker/coap_protocol.h"
-typedef wiselib::CoapProtocol<Os, broker_t, serializer_t, allocator_t> protocol_t;
+#include "hl_coap_protocol.h"
+typedef wiselib::HlCoapProtocol<Os, broker_t, serializer_t, allocator_t> protocol_t;
 
-#include "util/broker/insert_message.h"
+#include "insert_message.h"
 typedef wiselib::InsertMessage<Os> insert_message_t;
 
-#include "util/broker/payload_request_message.h"
+#include "payload_request_message.h"
 typedef wiselib::PayloadRequestMessage<Os> payload_message_t;
 
 //#include "util/pstl/map_static_vector.h"
@@ -168,18 +167,23 @@ typedef wiselib::PayloadRequestMessage<Os> payload_message_t;
 
 
 #ifndef PC
-	#include "util/broker/semantic_data_provider.h"
+#include "semantic_data_provider.h"
     #ifdef TS_SDP
         #include "external_interface/isense/isense_temperature_callback_sensor.h"
         typedef wiselib::iSenseTemperatureCallbackSensor<Os> TempSensor_t;
+
+
         typedef wiselib::SemanticDataProvider<Os, broker_t, TempSensor_t, allocator_t> temp_data_provider_t;
     #endif
     #ifdef LS_SDP
         #include "external_interface/isense/isense_light_callback_sensor.h"
         typedef wiselib::iSenseLightCallbackSensor<Os> LightSensor_t;
-        typedef wiselib::SemanticDataProvider<Os, broker_t, LightSensor_t, allocator_t> light_data_provider_t;
+
+        typedef wiselib::SemanticDataProvider<Os, broker_t, LightSensor_t, allocator_t> light_data_provider_t;;
+
     #endif
 #endif
+
 
 allocator_t::self_pointer_t allocator_ = &allocator_instance;
 
@@ -189,7 +193,6 @@ public:
 
     void init( Os::AppMainParameter& value )
     {
-
 #if !TS_NOTHING
 
     #if !FIRST_FIT_ALLOCATOR
@@ -201,17 +204,13 @@ public:
         clock_ = &wiselib::FacetProvider<Os, Os::Clock>::get_facet( value );
         radio_ = &wiselib::FacetProvider<Os, Os::Radio>::get_facet( value );
         rand_ = &wiselib::FacetProvider<Os, Os::Rand>::get_facet( value );
-	#ifdef PC
-        mid_ = ( uint16_t )rand_->operator()( 65536 / 2 );
-	#else
-        mid_ = ( uint16_t )rand_->operator()( radio_->id() / 2 );
-	#endif
 
     #ifdef PC
-        uart_ = &wiselib::FacetProvider<Os, uart_t>::get_facet( value );
+            uart_ = &wiselib::FacetProvider<Os, uart_t>::get_facet( value );
         #ifndef DRY
             uart_->set_address( "/dev/ttyUSB0" );
             uart_->enable_serial_comm( );
+
         #endif
         radio_->init( *uart_ );
     #endif
@@ -220,103 +219,132 @@ public:
     #endif
 
     #ifndef PC
-		#ifdef TS_SDP
-			tempsensor_ = &wiselib::FacetProvider<Os, TempSensor_t>::get_facet( value );
-		#endif
-		#ifdef LS_SDP
-			lightsensor_ = &wiselib::FacetProvider<Os, LightSensor_t>::get_facet( value );
-		#endif
+	#ifdef TS_SDP
+            tempsensor_ = &wiselib::FacetProvider<Os, TempSensor_t>::get_facet( value );
+        #endif
+	#ifdef LS_SDP
+	    lightsensor_ = &wiselib::FacetProvider<Os, LightSensor_t>::get_facet( value );
+
+lightsensor_->setThreshold( 0 );
+lightsensor_->register_sensor_callback<IoTTest, &IoTTest::callbackcrap > (this);
+	#endif
     #endif
 
         init_tuple_store<dictionary_store_t::internal_tuple_t > ();
+
         broker_.init( *debug_, *timer_, codec_store_, allocator_ );
-        protocol_.init( broker_, allocator_, radio_, timer_, debug_, rand_ );
-        add_resources();
-        protocol_.coap_start();
+
+        protocol_.init( broker_, radio_, allocator_,timer_,rand_, debug_ );
 
     #if !defined(PC) && (defined(TS_SDP) || defined(LS_SDP))
         init_dataproviders( );
     #endif
 
         timer_->set_timer<IoTTest,
-               &IoTTest::execute > (2000, this, 0);
-#ifndef PC
-        timer_->set_timer<IoTTest,
-               &IoTTest::get_light2 > (4000, this, 0);
-        timer_->set_timer<IoTTest,
                  &IoTTest::debug_printer> (10000, this, 0);
-#endif
-        debug_->debug("CoAP application bootin! %d\n", mid_);
+        timer_->set_timer<IoTTest,
+               &IoTTest::execute > (5000, this, 0);
+        debug_->debug("init() done");
+        broker_t::string_t doc_name( "NODE", allocator_ );
+        request_document( doc_name );
 
 #endif
     }
+
+
+	void callbackcrap(uint32_t as) {
+	debug_->debug("%d\n",as);
+}
+
 
 #if !TS_CODESIZE
 
     void execute( void* )
     {
+	debug_->debug("Brace yourself - now execute");
 #ifdef PC
-        send_coap( );
-        // broker_t::string_t doc_name( "NODE", allocator_ );
-        // request_document( doc_name );
-        timer_->set_timer<IoTTest,
-               &IoTTest::execute > (5000, this, 0);
+        post_metadata( );
+        broker_t::string_t doc_name( "NODE", allocator_ );
+        // radio_->reg_recv_callback<IoTTest, &IoTTest::receive_radio_message > (this);
+        request_document( doc_name );
 #endif // PC
     }
 #endif // TS_CODESIZE
 
-#ifndef PC
+#if !defined(PC)
     #ifdef TS_SDP
         TempSensor_t::self_pointer_t tempsensor_;
         temp_data_provider_t temp_data_provider_;
     #endif
     #ifdef LS_SDP
-        LightSensor_t::self_pointer_t lightsensor_;
-        light_data_provider_t light_data_provider_;
+	LightSensor_t::self_pointer_t lightsensor_;
+
+	light_data_provider_t light_data_provider_;
     #endif
 
     void init_dataproviders( )
     {
-    #ifdef TS_SDP
+
+	#ifdef TS_SDP
         temp_data_provider_.init(
                                   string_t( "ex:Sensor1234", allocator_ ),
                                   string_t( "SENS", allocator_ ),
                                   string_t( "ssn:Temperature", allocator_ ),
                                   &broker_,
                                   tempsensor_,
-                                  allocator_, debug_, timer_
+                                  allocator_,debug_,timer_
                                   );
-    #endif
-    #ifdef LS_SDP
+	#endif
+	#ifdef LS_SDP
         light_data_provider_.init(
                                   string_t( "ex:Sensor1235", allocator_ ),
                                   string_t( "SENS", allocator_ ),
                                   string_t( "ssn:Light", allocator_ ),
                                   &broker_,
                                   lightsensor_,
-                                  allocator_, debug_, timer_
+                                  allocator_, debug_,timer_
                                   );
-    #endif
-        debug_->debug("Data Providers Initialized\n");
+	#endif
+        debug_->debug("Data Providers Initialized");
     }
 #endif
 
 #if !TS_CODESIZE
 
+    void request_document( broker_t::string_t doc_name )
+    {
+        debug_->debug("req doc %s", doc_name.c_str());
+
+        payload_message_t msg;
+        msg.set_command_type( SSD_REST_REQUEST );
+        msg.set_request_id( 1 );
+        msg.set_request_type( protocol_t::GET_DOCUMENT );
+        msg.set_payload( doc_name.length( ), ( uint8_t* ) doc_name.c_str( ) );
+        //msg.set_flags(payload_message_t::FLAG_COMPRESSED);
+
+#ifdef DRY
+        protocol_.get();
+#else
+//        radio_->send( Os::Radio::BROADCAST_ADDRESS, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+        protocol_.get();
+#endif
+
+    }
+
     template<typename Tuple>
     void init_tuple_store( )
     {
+
         tuple_container_.init(
                                allocator_,
                                tuple_container_t::comparator_t::from_function<
-								   tuple_container_t::ptr_cmp_comparator<Tuple>
+                               tuple_container_t::ptr_cmp_comparator<Tuple>
                                >()
-                              );
+                               );
 
         tuple_store_.init(
                            allocator_, &tuple_container_,debug_
                            );
-        null_codec_t::self_pointer_t null_codec = allocator_->allocate<null_codec_t > ();
 
         dictionary_t::self_pointer_t dictionary = allocator_->allocate<dictionary_t > ();
         dictionary->init( allocator_ );
@@ -329,6 +357,7 @@ public:
         huffmann_codec_t::self_pointer_t huffmann_codec = allocator_->allocate<huffmann_codec_t > ();
         huffmann_codec->set_allocator( allocator_ );
 
+        null_codec_t::self_pointer_t null_codec = allocator_->allocate<null_codec_t > ();
         null_codec->set_allocator( allocator_ );
 
         codec_store_ = allocator_->allocate<codec_store_t > ();
@@ -336,68 +365,163 @@ public:
                             dictionary_store, huffmann_codec, null_codec, allocator_
                             );
 
+
     }
 
-    void add_resources( )
-    {
-    	uint8_t rid = protocol_.add_resource( "sensors/light", true, 120, 5, TEXT_PLAIN );
-    	protocol_.add_method<IoTTest, &IoTTest::get_light>( rid, 0, GET, this);
+    /*
+    void receive_radio_message( Os::Radio::node_id_t source, Os::Radio::size_t length, Os::Radio::block_data_t *buffer){
+        payload_message_t *msg = (payload_message_t*) buffer;
+        if(msg->command_type() == SSD_REST_RESPONSE){
+            serializer_t serializer(allocator_);
+            serializer.deserialize(msg->payload(),msg->payload()+msg->payload_length(),debug_);
+        }
     }
+     */
 
-#define PC
+
+
+
 #ifdef PC
-    void send_coap( )
+
+    void post_metadata( )
     {
-        char path[] = "sensors/light\0";
-        // char payload[] = "0";
-        Os::Radio::block_data_t buf[100];
-        uint8_t buf_len;
-        uint16_t host = 1;
-        uint8_t token[8];
+        tuple_t t;
+        t.set_allocator( allocator_ );
 
-        token[0] = 0xc1;
-        token[1] = 0x45;
-        token[2] = 0xaf;
-        packet.init();
-        packet.set_type( CON );
-        packet.set_code( GET );
-        packet.set_mid( mid_++ );
-        // bytes_written += sprintf( buffer + bytes_written, "" );
+        int i = 0;
 
-        packet.set_uri_host( host );
-        packet.set_uri_path_len( sizeof( path ) - 1 );
-        packet.set_uri_path( path );
-        packet.set_observe( 0 );
-        packet.set_token_len( 3 );
-        packet.set_token( token );
+        //        documents_map_t docs;
+        broker_t::string_t doc_name( "NODE", allocator_ );
+        broker_.create_document( doc_name );
 
-        packet.set_option( URI_HOST );
-        packet.set_option( URI_PATH );
-        packet.set_option( OBSERVE );
-        packet.set_option( TOKEN );
+        N3Reader<Os, allocator_t, string_t, COLS> reader( "node_rdf.txt", allocator_ );
+        for (; reader.ok( ); ++reader, i++ )
+        {
+            if ( i >= 20 )
+            {
+                break;
+            }
 
-        packet.set_option( BLOCK2 );
-        packet.set_block2_num( 3 );
-        // packet.set_block2_offset( 64 );
-        packet.set_block2_size( 64 );
+            //            tuple_t t;
+            //            t.set_allocator( allocator_ );
+            insert_message_t msg;
+            msg.set_command_type( SSD_REST_REQUEST );
+            msg.set_request_id( 1 );
+            msg.set_request_type( protocol_t::INSERT );
+            msg.set_transaction_id( i % 20 );
+            msg.set_Insert_type( protocol_t::COMMAND );
+            msg.set_type_action( protocol_t::INSERT_COMMAND );
 
-        // packet.set_payload( ( uint8_t * )payload );
-        // packet.set_payload_len( sizeof( payload ) );
-        buf_len = packet.packet_to_buffer( buf );
-        debug_->debug("Coap message buffer: %s\n", buf);
+            string_t s( allocator_ ), p( allocator_ ), o( allocator_ );
+
+            s = (*reader)[0];
+            p = (*reader)[1];
+            o = (*reader)[2];
+
+            size_t sl, pl, ol;
+
+            sl = s.length( );
+            pl = p.length( );
+            ol = o.length( );
+
+
+#if POST_CODED
+            huffmann_codec_t codec;
+            codec.set_allocator( allocator_ );
+            null_codec_t nullcodec;
+            nullcodec.set_allocator( allocator_ );
+
+            bitstring_t sh( allocator_ ), ph( allocator_ ), oh( allocator_ );
+            codec.encode( s, sh );
+            codec.encode( p, ph );
+            codec.encode( o, oh );
+            sl = sh.length( );
+            pl = ph.length( );
+            ol = oh.length( );
+
+            s.clear( );
+            p.clear( );
+            o.clear( );
+            nullcodec.decode( s, sh );
+            nullcodec.decode( p, ph );
+            nullcodec.decode( o, oh );
+
+            msg.set_flags( payload_message_t::FLAG_COMPRESSED );
+#endif
 
 #ifdef DRY
-        protocol_.receive_radio_message( 0x8, buf_len, buf);
+            protocol_.receive_radio_message( 0x8, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
 #else
-        debug_->debug("Sending messageSize: %d \n", buf_len);
-        radio_->send( Os::Radio::BROADCAST_ADDRESS, buf_len, buf );
+            radio_->send( Os::Radio::BROADCAST_ADDRESS, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
 #endif
-        //timer_->set_timer<CoapApplication, &CoapApplication::simple_send>( 30000, this, 0 );
+
+            timer_->sleep( 100 );
+            msg.set_Insert_type( protocol_t::STRING );
+            msg.set_type_action( protocol_t::SUBJECT );
+            msg.set_payload( s.length( ), ( uint8_t* ) s.c_str( ), sl );
+#ifdef DRY
+            protocol_.receive_radio_message( 0x8, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+#else
+            radio_->send( Os::Radio::BROADCAST_ADDRESS, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+#endif
+
+            timer_->sleep( 100 );
+            msg.set_Insert_type( protocol_t::STRING );
+            msg.set_type_action( protocol_t::PREDICATE );
+            msg.set_payload( p.length( ), ( uint8_t* ) p.c_str( ), pl );
+#ifdef DRY
+            protocol_.receive_radio_message( 0x8, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+#else
+            radio_->send( Os::Radio::BROADCAST_ADDRESS, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+#endif
+
+            timer_->sleep( 100 );
+            msg.set_Insert_type( protocol_t::STRING );
+            msg.set_type_action( protocol_t::OBJECT );
+            msg.set_payload( o.length( ), ( uint8_t* ) o.c_str( ), ol );
+#ifdef DRY
+            protocol_.receive_radio_message( 0x8, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+#else
+            radio_->send( Os::Radio::BROADCAST_ADDRESS, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+#endif
+
+            timer_->sleep( 100 );
+            msg.set_Insert_type( protocol_t::STRING );
+            msg.set_type_action( protocol_t::DOCUMENT_NAME );
+            msg.set_payload( doc_name.length( ), ( uint8_t* ) doc_name.c_str( ) );
+#ifdef DRY
+            protocol_.receive_radio_message( 0x8, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+#else
+            radio_->send( Os::Radio::BROADCAST_ADDRESS, msg.buffer_size( ), (Os::Radio::block_data_t*) & msg );
+#endif
+            printf( "%d %s %s %s %s \n",i, s.c_str( ), p.c_str( ), o.c_str( ), (*reader)[3].c_str( ) );
+            timer_->sleep( 100 );
+            //            broker_.tuple_store()->insert(t);
+        }
+
+
+#ifdef DRY
+        //read out tuple store for test reasons
+        codec_store_t::iterator it_end = codec_store_->end( );
+        for ( codec_store_t::iterator it = codec_store_->begin( ); it != it_end; ++it )
+        {
+            tuple_t t;
+            t.set_allocator( allocator_ );
+            t[0] = (*it)[0];
+            t[1] = (*it)[1];
+            t[2] = (*it)[2];
+            t[3] = (*it)[3];
+
+            printf( "%d %s %s %s %s \n",i, t[0].c_str( ), t[1].c_str( ), t[2].c_str( ), t[3].c_str( ) );
+
+        }
+#endif
     }
-#endif //PC
+
+#endif
 
 	void debug_printer(void* ) {
-	    debug_->debug("About to debug : Brace Yourself\n");
+	    debug_->debug("About to debug : Brace Yourself");
         codec_store_t::iterator it_end = codec_store_->end( );
         for ( codec_store_t::iterator it = codec_store_->begin( ); it != it_end; ++it )
         {
@@ -409,38 +533,13 @@ public:
             t[3] = (*it)[3];
 
             debug_->debug( "%s %s %s %s \n",t[0].c_str( ), t[1].c_str( ), t[2].c_str( ), t[3].c_str( ) );
+
         }
+
+
         timer_->set_timer<IoTTest,
                 &IoTTest::debug_printer> (10000, this, 0);
 	}
-
-    char* get_light( uint8_t method )
-    {
-       tuple_t t;
-       t[0] = "ex:Sensor1235";
-       t[1] = "<http://www.loa-cnr.it/ontologies/DUL.owl#hasValue>";
-       t.set_wildcard(2, true);
-       t.set_wildcard(3, true);
-
-       codec_store_t::iterator it = codec_store_->find( t );
-
-       debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
-       return (*it)[2].c_str();
-    }
-
-    void get_light2( void* )
-    {
-       tuple_t t;
-       t[0] = "ex:Sensor1235";
-       t[1] = "<http://www.loa-cnr.it/ontologies/DUL.owl#hasValue>";
-       t.set_wildcard(2, true);
-       t.set_wildcard(3, true);
-
-       codec_store_t::iterator it = codec_store_->find( t );
-
-       debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
-       // return (*it)[2].c_str();
-    }
 
 
 #endif // !TS_NOTHING
@@ -453,17 +552,12 @@ private:
     Os::Rand::self_pointer_t rand_;
 
 #if !TS_NOTHING
-    coap_t coap_;
-    coap_packet_t packet;
 
     broker_t broker_;
     codec_store_t::self_pointer_t codec_store_;
     tuple_container_t tuple_container_;
     tuple_store_t tuple_store_;
     protocol_t protocol_;
-
-    uint16_t mid_;
-    char data_[128];
 
 #ifdef PC
     uart_t::self_pointer_t uart_;
