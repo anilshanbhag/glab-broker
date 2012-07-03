@@ -297,7 +297,7 @@ public:
                                   allocator_, debug_, timer_
                                   );
     #endif
-        debug_->debug("Data Providers Initialized\n");
+        // debug_->debug("Data Providers Initialized\n");
     }
 #endif
 
@@ -344,7 +344,6 @@ public:
     	protocol_.add_method<IoTTest, &IoTTest::get_light>( rid, 0, GET, this);
     }
 
-#define PC
 #ifdef PC
     void send_coap( )
     {
@@ -384,12 +383,12 @@ public:
         // packet.set_payload( ( uint8_t * )payload );
         // packet.set_payload_len( sizeof( payload ) );
         buf_len = packet.packet_to_buffer( buf );
-        debug_->debug("Coap message buffer: %s\n", buf);
+        // debug_->debug("Coap message buffer: %s\n", buf);
 
 #ifdef DRY
         protocol_.receive_radio_message( 0x8, buf_len, buf);
 #else
-        debug_->debug("Sending messageSize: %d \n", buf_len);
+        // debug_->debug("Sending messageSize: %d \n", buf_len);
         radio_->send( Os::Radio::BROADCAST_ADDRESS, buf_len, buf );
 #endif
         //timer_->set_timer<CoapApplication, &CoapApplication::simple_send>( 30000, this, 0 );
@@ -397,7 +396,7 @@ public:
 #endif //PC
 
 	void debug_printer(void* ) {
-	    debug_->debug("About to debug : Brace Yourself\n");
+	    // debug_->debug("About to debug : Brace Yourself\n");
         codec_store_t::iterator it_end = codec_store_->end( );
         for ( codec_store_t::iterator it = codec_store_->begin( ); it != it_end; ++it )
         {
@@ -408,7 +407,7 @@ public:
             t[2] = (*it)[2];
             t[3] = (*it)[3];
 
-            debug_->debug( "%s %s %s %s \n",t[0].c_str( ), t[1].c_str( ), t[2].c_str( ), t[3].c_str( ) );
+            // debug_->debug( "%s %s %s %s \n",t[0].c_str( ), t[1].c_str( ), t[2].c_str( ), t[3].c_str( ) );
         }
         timer_->set_timer<IoTTest,
                 &IoTTest::debug_printer> (10000, this, 0);
@@ -424,7 +423,7 @@ public:
 
        codec_store_t::iterator it = codec_store_->find( t );
 
-       debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
+       // debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
        return (*it)[2].c_str();
     }
 
@@ -438,7 +437,7 @@ public:
 
        codec_store_t::iterator it = codec_store_->find( t );
 
-       debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
+       // debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
        // return (*it)[2].c_str();
     }
 
