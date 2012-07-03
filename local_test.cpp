@@ -151,7 +151,7 @@ typedef wiselib::protobuf::buffer_dynamic<Os, allocator_t> buffer_dynamic_t;
     typedef wiselib::ShdtRdfSerializer<Os, broker_t::iterator, buffer_dynamic_t, allocator_t, broker_t::string_t> serializer_t;
 #else
     #include "util/broker/protobuf_rdf_serializer.h"
-    typedef wiselib::ProtobufRdfSerializer<Os, broker_t::iterator, buffer_dynamic_t, allocator_t> serializer_t;
+    typedef wiselib::ProtobufRdfSerializer<Os, codec_store_t::iterator, buffer_dynamic_t, allocator_t> serializer_t;
 #endif
 
 #include "util/broker/coap_protocol.h"
@@ -421,10 +421,20 @@ public:
        t.set_wildcard(2, true);
        t.set_wildcard(3, true);
 
-       codec_store_t::iterator it = codec_store_->find( t );
+       codec_store_t::iterator it = codec_store_->find( t ),
+           it_end = codec_store_->end( );
 
-       // debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
-       return (*it)[2].c_str();
+       bool more;
+       serializer_t serializer(it, it_end, allocator_);
+       do {
+            buffer_dynamic_t buffer(allocator_);
+            more = serializer.fill_buffer(buffer, 100, debug_);
+       } while (more);
+
+       buffer_dynamic_t buffer(allocator_);
+       debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
+       return (char*) buffer.data();
+       //return (*it)[2].c_str();
     }
 
     void get_light2( void* )
