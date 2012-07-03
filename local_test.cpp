@@ -425,16 +425,19 @@ public:
            it_end = codec_store_->end( );
 
        bool more;
-       serializer_t serializer(it, it_end, allocator_);
-       do {
-            buffer_dynamic_t buffer(allocator_);
-            more = serializer.fill_buffer(buffer, 100, debug_);
-       } while (more);
-
        buffer_dynamic_t buffer(allocator_);
+       serializer_t serializer(it, it_end, allocator_);
+       serializer.fill_buffer(buffer, 0, debug_);
+       check_correctnesss()
        debug_->debug( "current light value = %s\n", (*it)[2].c_str() );
        return (char*) buffer.data();
        //return (*it)[2].c_str();
+    }
+
+    void check_correctness( dynamic_buffer_t& buffer )
+    {
+        serializer_t serializer(allocator_);
+        serializer.deserialize(buffer, debug_);
     }
 
     void get_light2( void* )
